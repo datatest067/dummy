@@ -1,0 +1,16 @@
+node {
+   stage('SCM Checkout') {
+      git 'https://github.com/cams7/java-home-cloud-example'
+   }
+   stage('Compile Package') {
+      def mvnHome = tool name: 'maven', type: 'maven'      
+      sh "$mvnHome/bin/mvn package"
+   }
+   stage('Slack Notification') {
+      slackSend baseUrl: 'https://hooks.slack.com/services/', 
+      channel: ' #java-home-cloud-example-10', 
+      color: 'good', 
+      message: 'Welcome to Jenkins, Slack!', 
+      tokenCredentialId: 'slack-demo200111'
+   }
+}
