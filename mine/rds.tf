@@ -20,7 +20,17 @@ resource "aws_secretsmanager_secret_version" "password" {
   secret_id     = aws_secretsmanager_secret.password.id
   secret_string = random_password.master_password.result
 }
-
+provider "postgresql" {
+  host            = module.db.db_instance_address
+  port            = 5432
+  database        = "postgres"
+  username        = "postgres"
+  password        = aws_secretsmanager_secret_version.password.secret_string
+  sslmode         = "require"
+  connect_timeout = 15
+  max_connections = 1 # avoids a race condition, see https://github.com/cyrilgdn/terraform-provider-postgresql/pull/169
+  superuser = false
+}
 
 resource "postgresql_role" "users" {
   for_each = var.db_users
@@ -34,7 +44,8 @@ resource "postgresql_grant_role" "iam" {
   grant_role = "rds_iam"
   depends_on = [
     postgresql_role.users,
-    postgresql_database.databases
+    postgresql_database.databases,
+    postgresql_grant.database-grants
   ]
 }
 
@@ -44,6 +55,29 @@ resource "postgresql_database" "databases" {
   owner    = each.value
 
   depends_on = [postgresql_role.users]
+}
+
+resource "postgresql_grant" "database-grants" {
+    for_each = { for item in flatten([
+    for user, privelege_map in var.db_users : [
+      for db, privileges in privelege_map : {
+        "${user}-${db}" = {
+          user = user
+          db = db
+          privileges = privileges
+        }
+      }
+    ]
+    ]) :
+    keys(item)[0] => values(item)[0]
+  }
+
+  database    = each.value.db
+  role        = each.value.user
+  object_type = "database"
+  privileges  = each.value.privileges
+
+  depends_on    = [postgresql_role.users, postgresql_database.databases]
 }
 
 resource "aws_security_group" "postgress_sql" {
