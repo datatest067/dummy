@@ -10,12 +10,31 @@ container_port                 = "80"
 ssl_redirect                   = true
 redis_name                     = "greenfield-main"
 elasticache_instance_type      = "cache.t3.medium"
-elasticache_availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
-elasticache_engine_version     = "6.2.6"
+elasticache_availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+engine_version     = "4.0.10"
 container_name                 = "greenfield-main"
-image                          = ""
-region                         = "us-east-2"
+image                          = "public.ecr.aws/aws-containers/ecsdemo-frontend:776fd50"
+region                         = "us-east-1"
 log_stream_name                = "greenfield-main"
-elb_name                       = "greenfield-main"
-certificate_sans               = [""]
+elb_name                       = "ccreplcluster"
+certificate_sans               = ["123"]
 sentry_flask_dsn               = "https://1c52f107816c49848a487501e53a2cc1@o1080417.ingest.sentry.io/6249444"
+cluster_name = "arn:aws:ecs:us-east-1:110594377390:cluster/ccreplcluster"
+alb_name  = "ccreplcluster"
+container_cpu = "512"
+container_memory = "2048"
+elasticache_address = null
+desired_count = 1
+https_cidr_blocks = ["0.0.0.0/0"]
+sg_name = "myetst"
+elasticache_family = "redis4.0"
+# environment = [ 
+#       {
+#       name  = "MAIL_PORT",
+#       value = 587
+#     },
+#  ]
+
+
+
+
