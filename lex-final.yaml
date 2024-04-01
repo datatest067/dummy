@@ -1,0 +1,275 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon Lex Chatbot CloudFormation Template
+Parameters:
+  BotRoleName:
+    Description: Bot Role Name
+    Type: String
+    Default: 'gc.iam.role.lex-bot'
+
+  BotPolicyName:
+    Description: Bot Policy Name
+    Type: String
+    Default: 'gc.iam.policy.lex-bot'
+
+  LexName:
+    Description: Lex Name
+    Type: String
+    Default: 'gcm-lex'
+
+  Locale:
+    Description: locale name
+    Type: String
+    Default: 'en_US'
+
+  S3BucketName: 
+    Description: 'Lex S3 Bucket Name'
+    Type: String
+    AllowedPattern: '[a-zA-Z0-9][a-zA-Z0-9-\.]{2,62}'
+    Default: 'dfx-s3-mine'
+  
+  S3ObjectName: 
+    Description: 'Lex S3 Object Name'
+    Type: String
+    Default: 'anil/FlowerBot.zip'
+
+  BotAliasName: 
+    Description: 'Bot Alias Name'
+    Type: String
+    Default: 'Dev'
+
+  VoiceId:
+    Default: 'Joanna'
+    Description: Voice Id of Lex
+    Type: String
+    AllowedValues:
+      - 'Danielle'
+      - 'Gregory'
+      - 'Ivy'
+      - 'Joanna'
+      - 'Joey'
+      - 'Justin'
+      - 'Kendra'
+      - 'Kevin'
+      - 'Kimberly'
+      - 'Matthew'
+      - 'Ruth'
+      - 'Salli'
+      - 'Stephen'
+
+  LambdaFunctionName:
+    Description: Function Name
+    Type: String
+    Default: 'gcm-lex-import-lambda'
+
+  LambdaRoleName:
+    Description: Lambda Role Name
+    Type: String
+    Default: 'gc.iam.role.lex-lambda'
+
+  LambdaPolicyName:
+    Description: Lambda Policy Name
+    Type: String
+    Default: 'gc.iam.policy.lex-lambda'
+
+# IAM Role used by the Lex service to make runtime calls
+Resources:
+  BotRuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref BotRoleName
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lexv2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      Policies:
+        - PolicyName: !Ref BotPolicyName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "polly:SynthesizeSpeech"
+                  - "comprehend:DetectSentiment"
+                Resource: "*"
+ 
+  # Inline bot definition that depends on the IAM role.
+  LexBot:
+    DependsOn: BotRuntimeRole
+    Type: AWS::Lex::Bot
+    Properties:
+      Name: !Ref LexName
+      RoleArn: !GetAtt BotRuntimeRole.Arn
+      
+      BotFileS3Location:
+        S3Bucket: !Ref S3BucketName
+        S3ObjectKey: !Ref S3ObjectName # zip file should be exist in the existing s3 bucket. 
+
+      DataPrivacy:
+        ChildDirected: false
+      IdleSessionTTLInSeconds: 300
+      Description: "Creating a Bot inside amazon Lex"
+      AutoBuildBotLocales: false
+      BotLocales:
+        - LocaleId: !Ref Locale
+          Description: "Locale for Bot"
+          NluConfidenceThreshold: 0.40
+          VoiceSettings:
+            VoiceId: !Ref VoiceId
+
+  # Define a bot version that depends on the DRAFT version of the Lex Bot.
+  LexBotVersion:
+    DependsOn: LexBot
+    Type: AWS::Lex::BotVersion
+    Properties:
+      BotId: !Ref LexBot
+      BotVersionLocaleSpecification:
+        - LocaleId: !Ref Locale
+          BotVersionLocaleDetails:
+            SourceBotVersion: DRAFT
+      Description: Lex Bot Version
+
+  # # Define the alias by providing the bot version created by the AWS::Lex::BotVersion resource above 
+  LexBotAlias:
+    DependsOn: LexBotVersion
+    Type: AWS::Lex::BotAlias
+    Properties:
+      BotId: !Ref LexBot
+      BotAliasName: !Ref BotAliasName
+      BotVersion: !GetAtt LexBotVersion.BotVersion
+      SentimentAnalysisSettings:
+        DetectSentiment: true
+
+# Lex Lambda Function Role 
+  AWSLambdaExecutionRole:
+     Type: AWS::IAM::Role
+     Properties:
+       RoleName: !Ref LambdaRoleName
+       AssumeRolePolicyDocument:
+         Statement:
+         - Action:
+           - sts:AssumeRole
+           Effect: Allow
+           Principal:
+             Service:
+             - lambda.amazonaws.com
+         Version: '2012-10-17'
+       Path: "/"
+       ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonLexFullAccess
+       Policies:
+        - PolicyName: !Ref LambdaPolicyName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - iam:PassRole
+                Resource: 
+                - arn:aws:logs:*:*:*
+                - !GetAtt BotRuntimeRole.Arn 
+
+  # Lex Lambda Function without s3 bucket trigger. 
+  # Note: need to add trigger manually on aws console on lambda function gcm-lex-import-lambda.
+  AWSLambdaFunction:
+     Type: "AWS::Lambda::Function"
+     Properties:
+       Description: "Work with S3 Buckets!"
+       FunctionName: !Ref LambdaFunctionName
+       Handler: index.lambda_handler
+       Role: !GetAtt AWSLambdaExecutionRole.Arn
+       Timeout: 360
+       Runtime: python3.12
+       Environment:
+        Variables:
+          Role_Arn: !GetAtt BotRuntimeRole.Arn
+          Bot_Name: !Ref LexName
+          Bot_Id: !Ref  LexBot
+       Code:
+         ZipFile: |
+          import boto3
+          import shlex
+          import subprocess
+          import json
+          import os
+          import time
+
+          role_arn = os.environ['Role_Arn']
+          bot_name = os.environ['Bot_Name']
+          aws_lex_bot_id   = os.environ['Bot_Id']
+
+          def lambda_handler(event, context):
+              # Get S3 bucket and object details from the event
+              s3_bucket = event['Records'][0]['s3']['bucket']['name']
+              s3_object_key = event['Records'][0]['s3']['object']['key']
+              # Initialize LexModelsV2 client
+              lex_client = boto3.client('lexv2-models')
+              s3 = boto3.resource('s3')
+              try:
+                  response1 = lex_client.create_upload_url()
+                  print (event)
+                  print(response1['importId'])
+                  print(response1['uploadUrl'])
+                  s3.Bucket(s3_bucket).download_file(s3_object_key, '/tmp/test.zip')
+                  CurlUrl=f'curl -X PUT -T "/tmp/test.zip" \"{response1["uploadUrl"]}\"'
+                  print (CurlUrl)
+                  print(subprocess.getstatusoutput(CurlUrl))
+                  status, output = subprocess.getstatusoutput(CurlUrl)
+                  # Start the import
+                  response = lex_client.start_import(
+                      importId=response1['importId'],
+                      resourceSpecification={
+                          'botImportSpecification': {
+                              'botName': bot_name,
+                              'roleArn': role_arn,
+                              'dataPrivacy': {
+                              'childDirected': False
+                              }
+                          }
+                      },
+                      mergeStrategy='Overwrite'
+                  )
+                  print(response)
+                  response = lex_client.describe_bot_locale(
+                    botId = aws_lex_bot_id,
+                    botVersion = "DRAFT",
+                    localeId = "en_US"
+                  )
+                  locale_status = response['botLocaleStatus']
+                  while locale_status != 'NotBuilt':
+                      print ("Bot Locale Status is " + locale_status)
+                      time.sleep(2)
+                      response = lex_client.describe_bot_locale(
+                          botId = aws_lex_bot_id,
+                          botVersion = "DRAFT",
+                          localeId = "en_US"
+                      )
+                      locale_status = response['botLocaleStatus']
+                  print("Bot Locale en_US created!")
+                  print("Beginning initial build of bot")
+                  response = lex_client.build_bot_locale(
+                      botId=aws_lex_bot_id,
+                      botVersion="DRAFT",
+                      localeId="en_US"
+                  )
+                  return {
+                      'statusCode' : 200,
+                      'body': 'Lex import started'
+                  }
+              except Exception as e:
+                  print(f"Error starting import: {e}")
+                  return {
+                      'statusCode' : 500,
+                      'body': 'Error starting Lex import'
+                  }
