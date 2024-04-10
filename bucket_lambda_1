@@ -137,7 +137,7 @@ def lambda_handler(event, context):
     destination_bucket_tag_based_replication = 'testbucketforendpoint'
     tag_key = 'replicate' #event['TagKey']
     tag_value = 'true' #event['TagValue']
-    iam_role_arn = "arn:aws:iam::110594377390:role/batch_service_role"
+    iam_role_arn = "arn:aws:iam::888:role/batch_service_role"
 
     account_id = boto3.client('sts').get_caller_identity().get('Account')
 
