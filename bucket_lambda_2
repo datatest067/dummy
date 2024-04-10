@@ -73,7 +73,7 @@ def wait_for_job_to_activate(account_id, job_id):
 
 def lambda_handler(event, context):
     source_bucket = 'cloudformationartifacts1432' #event['SourceBucket']
-    iam_role_arn = "arn:aws:iam::110594377390:role/batch_service_role"
+    iam_role_arn = "arn:aws:iam::888:role/batch_service_role"
     # pass as a list of rules to disable
     rule_id_to_disable=["full-bucket-replication"]
 
