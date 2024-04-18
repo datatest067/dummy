@@ -31,14 +31,14 @@ jobs:
         run: |
           for function in a c; do
             function_name="test-$function"
-            pwd
-            tree
             function_directory="test/test-$function"
             cd "$function_directory" || exit
             last_modified_file=$(ls -t | head -n 1)
             cd "$(git rev-parse --show-toplevel)" || exit
             latest_commit=$(git log --pretty=format:'%H' -n 1)
             last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
+            echo $latest_commit
+            echo $last_modified_commit
             
             if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
               echo "Deploying new function: $function_name"
