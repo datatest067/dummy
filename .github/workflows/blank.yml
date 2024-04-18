@@ -32,8 +32,8 @@ jobs:
               for function in a c; do
                 function_name="test-$function"
                 function_directory="test/test-$function"
-                git diff --quiet HEAD origin/dev -- $function_directory || echo changed  
-                git log --name-status -n $function_directory
+                git diff --quiet HEAD origin/dev -- "$function_directory" || echo changed  
+                git log --name-status -n "$function_directory"
 
               done
           #   function_name="test-$function"
