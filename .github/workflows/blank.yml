@@ -29,14 +29,16 @@ jobs:
 
       - name: Deploy to Google Cloud Functions
         run: |
-              cd test
-              for I in a c; do
-                function_name="test-$I"
-                #function_directory="test/$function_name"
-                 cp $function_name/$(ls -t $function_name | head -1) .
-                 files=(git diff-tree --no-commit-id --name-only -r $CI_COMMIT_SHA)
-                 echo $files
-              done
+          git diff --name-only --diff-filter=ADMR @~..@ | grep -q $1
+          retVal=$?
+          
+          echo "git command retVal : ${retVal}"
+          if [ $retVal -eq 0 ]; then
+            echo "folder/file : $1 changed"
+          else
+            echo "no match found for the folder/file : $1"
+            exit $retVal
+          fi
           #   function_name="test-$function"
           #   function_directory="test/test-$function"
           #   last_modified=$(stat -c %Y "$function_directory")
