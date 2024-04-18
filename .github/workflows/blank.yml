@@ -10,7 +10,7 @@ on:
   pull_request:
     branches: [ "dev" ]
     paths:
-      - 'test/mine-*/**'
+      - 'test/test-*/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -30,8 +30,8 @@ jobs:
       - name: Deploy to Google Cloud Functions
         run: |
           for function in a b c; do
-            function_name="extract-into-sheets-$function"
-            function_directory="test/mine-$function"
+            function_name="test-$function"
+            function_directory="test/test-$function"
             cd "$function_directory" || exit
             last_modified_file=$(ls -t | head -n 1)
             cd "$(git rev-parse --show-toplevel)" || exit
