@@ -42,9 +42,9 @@ jobs:
             echo $latest_commit
             #echo $last_modified_commit
             
-            if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
-              echo "Deploying new function: $function_name"
-            elif [ "$latest_commit" == "$last_modified" ]; then
+            # if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
+            #   echo "Deploying new function: $function_name"
+            if [ "$latest_commit" == "$last_modified" ]; then
               echo "Function $function_name exists in GCP, but no modifications detected, skipping deployment"
             else
               echo "Function $function_name has been modified, deploying changes"
