@@ -1,0 +1,586 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template will create the resources needed in Virginia Region
+Parameters:
+  ObjectKey:
+    Type: String
+    Description: Zip file name which is having python code.
+    Default: "lambda-without.zip"
+  CrossRegionObjectKey:
+    Type: String
+    Description: Zip file name which is having python code.
+    Default: "disable-rule.zip"    
+  CrossRegionDailyBucketName:
+    Type: String
+    Description: Cross Region Daily s3 Bucket Name.
+    Default: "terraform-test0010"
+  CrossRegionMonthlyBucketName:
+    Type: String
+    Description: Cross Region Monthly s3 Bucket Name.
+    Default: "terraform-test0010-month"
+  CrossRegionYearlyBucketName:
+    Type: String
+    Description: Cross Region Yearly Bucket Name.
+    Default: "terraform-test0010"
+  BucketName:
+    Description: Name of the S3 Bucket.  Do not include the -region as it is automatically appended.
+    Type: String
+    Default: ""
+  ExisitngLambdaCodeBucket:
+    Description: Name of the S3 Bucket.  Where Lambda code reside
+    Type: String
+    Default: "dfx-s3-mine"
+  # CrossRegionKeyID:
+  #   Description: KMS key ID of cross region for example- 357e52c5-bff7-48f4-bbb1-a65238aef38e.
+  #   Type: String
+  #   Default: "5e79524a-cc0d-4e65-9cf2-38bcd6ffa03a"
+  AccessControl:
+    Type: String
+    Description: "Defines ACL for bucket policy, (default: Private)"
+    Default: Private
+    AllowedValues:
+      - AuthenticatedRead
+      - AwsExecRead
+      - BucketOwnerRead
+      - BucketOwnerFullControl
+      - LogDeliveryWrite
+      - Private
+      - PublicRead
+      - PublicReadWrite
+  Versioning:
+    Type: String
+    Description: Defines if S3Bucket will version objects
+    AllowedValues:
+      - Enabled
+      - Suspended
+    Default: Enabled
+  CrossRegionKMSKeyArn:
+    Type: String
+    Description: KMS Key name to encrypt s3 bucket.
+    Default: ""
+  SameRegionKMSKeyArn:
+    Type: String
+    Description: KMS Key name to encrypt s3 bucket.
+    Default: "89ab2fdc-1522-492c-b065-681bd1384399"
+
+Resources:
+  # KMSBucket:
+  #   Type: AWS::KMS::Key
+  #   Properties:
+  #     Description: An example symmetric encryption KMS key
+  #     EnableKeyRotation: true
+  #     PendingWindowInDays: 20
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Join
+  #         - "-"
+  #         - - !Ref AWS::StackName
+  #           - !Ref AWS::Region
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref AWS::StackName
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - batchoperations.s3.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchEventsFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      Path: /
+      Policies:
+        - PolicyName: passrole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Resource: "*"
+  MonthlyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-sameregionmonthly
+      Description: LambdaFunction of python3.9.
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 600
+      Role: !GetAtt LambdaRole.Arn
+      Handler: enable-rule.lambda_handler
+      Code:
+        S3Bucket: !Ref ExisitngLambdaCodeBucket
+        S3Key: !Ref ObjectKey
+      Environment:
+        Variables:
+          Role_Arn: !GetAtt LambdaRole.Arn
+          Source_Bucket: !Ref DailyS3Bucket
+          Tag_Key: 'backup'
+          Tag_Value: 'monthly'
+          Days: 8
+          Destination_Bucket: !Ref  CrossRegionMonthlyBucketName
+  MonthlyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      Name: !Sub ${AWS::StackName}-sameregionmonthly
+      ScheduleExpression: cron(0 0 1 * ? *)
+      State: ENABLED
+      Targets:
+        - Id: monthly
+          Arn: !GetAtt MonthlyLambdaFunction.Arn
+  MonthlyInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-sameregionmonthly
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MonthlyEventRule.Arn
+  
+  MonthlyLambdaFunctionForExistingObject:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-crossregionmonthly
+      Description: LambdaFunction of python3.9.
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 600
+      Role: !GetAtt LambdaRole.Arn
+      Handler: disable-rule.lambda_handler
+      Code:
+        S3Bucket: !Ref ExisitngLambdaCodeBucket
+        S3Key: !Ref CrossRegionObjectKey
+      Environment:
+        Variables:
+          Role_Arn: !GetAtt LambdaRole.Arn
+          Source_Bucket: !Ref MonthlyS3Bucket
+          # Tag_Key: 'backup'
+          # Tag_Value: 'monthly'
+          # Days: 8
+          Rule_Id: 'Same Region'
+          Destination_Bucket: !Ref  CrossRegionMonthlyBucketName
+  MonthlyEventRuleForExistingObject:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      Name: !Sub ${AWS::StackName}-crossregionmonthly
+      ScheduleExpression: cron(0 0 3 * ? *)
+      State: ENABLED
+      Targets:
+        - Id: monthly
+          Arn: !GetAtt MonthlyLambdaFunctionForExistingObject.Arn
+  MonthlyInvokeLambdaForExistingObject:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-crossregionmonthly
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MonthlyEventRuleForExistingObject.Arn
+  YearlyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-sameregionyearly
+      Description: LambdaFunction of python3.9.
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 600
+      Role: !GetAtt LambdaRole.Arn
+      Handler: enable-rule.lambda_handler
+
+      Code:
+        S3Bucket: !Ref ExisitngLambdaCodeBucket
+        S3Key: !Ref ObjectKey
+      Environment:
+        Variables:
+          Role_Arn: !GetAtt LambdaRole.Arn
+          Source_Bucket: !Ref MonthlyS3Bucket
+          Tag_Key: 'backup'
+          Tag_Value: 'monthly'
+          Days: 32
+          Destination_Bucket: !Ref  CrossRegionYearlyBucketName
+  YearlyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      Name: !Sub ${AWS::StackName}-sameregionyearly
+      ScheduleExpression: cron(0 0 1 3 ? *)
+      State: ENABLED
+      Targets:
+        - Id: yearly
+          Arn: !GetAtt YearlyLambdaFunction.Arn
+  YearlyInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-sameregionyearly
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt YearlyEventRule.Arn
+  YearlyLambdaFunctionForExistingObject:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-crossregionyearly
+      Description: LambdaFunction of python3.9.
+      Runtime: python3.9
+      MemorySize: 512
+      Timeout: 600
+      Role: !GetAtt LambdaRole.Arn
+      Handler: disable-rule.lambda_handler
+
+      Code:
+        S3Bucket: !Ref ExisitngLambdaCodeBucket
+        S3Key: !Ref CrossRegionObjectKey
+      Environment:
+        Variables:
+          Role_Arn: !GetAtt LambdaRole.Arn
+          Source_Bucket: !Ref MonthlyS3Bucket
+          # Tag_Key: 'backup'
+          # Tag_Value: 'monthly'
+          # Days: 32
+          Rule_Id: 'Same Region'
+          Destination_Bucket: !Ref  CrossRegionYearlyBucketName
+  YearlyEventRuleForExistingObject:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: default
+      Name: !Sub ${AWS::StackName}-crossregionyearly
+      ScheduleExpression: cron(0 0 1 1 ? *)
+      State: ENABLED
+      Targets:
+        - Id: yearly
+          Arn: !GetAtt YearlyLambdaFunctionForExistingObject.Arn
+  YearlyInvokeLambdaForExistingObject:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-crossregionyearly
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt YearlyEventRuleForExistingObject.Arn
+  ReplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-replication
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - s3.amazonaws.com
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - batchoperations.s3.amazonaws.com
+  ReplicatonRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: [!Ref ReplicationRole]
+      PolicyName: !Sub ${AWS::StackName}-replication-policy    
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowReadAccess
+            Effect: Allow
+            Action:
+              - s3:GetReplicationConfiguration
+              - s3:ListBucket
+              - s3:GetReplicationConfiguration
+              - s3:GetObjectVersionForReplication
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectVersionTagging
+              - s3:GetObjectRetention
+              - s3:GetObjectLegalHold
+              - s3:PutInventoryConfiguration
+            Resource:
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-daily
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-daily/*
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-monthly
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-monthly/*
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-yearly
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-yearly/*
+          - Sid: AllowCrossRefionS3KMSAccess
+            Effect: Allow
+            Action:
+                - s3:ReplicateObject
+                - s3:ReplicateDelete
+                - s3:ReplicateTags
+                - s3:GetObjectVersionTagging
+            Resource:
+              - !Sub arn:aws:s3:::${CrossRegionDailyBucketName}/*
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-monthly/*
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-yearly/*
+              - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-daily/*
+              - !Sub arn:aws:s3:::${CrossRegionMonthlyBucketName}/*
+              - !Sub arn:aws:s3:::${CrossRegionYearlyBucketName}/*
+          - Sid: AllowKMSSameRegionAccess
+            Action:
+            - "kms:Decrypt"
+            Effect: "Allow"
+            Condition:
+              StringLike:
+                kms:ViaService: !Sub "s3.${AWS::Region}.amazonaws.com"
+                kms:EncryptionContext:aws:s3:arn:
+                - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-daily/*
+                - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-monthly/*
+                - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-yearly/*
+            Resource: !Ref SameRegionKMSKeyArn
+          - Sid: AllowKMSCrossRegionAccess
+            Action:
+            - "kms:Encrypt"
+            Effect: "Allow"
+            Condition:
+              StringLike:
+                kms:ViaService:
+                  - "s3.us-west-2.amazonaws.com"
+                  - !Sub "s3.${AWS::Region}.amazonaws.com"
+                kms:EncryptionContext:aws:s3:arn:
+                  - !Sub arn:aws:s3:::${CrossRegionDailyBucketName}/*
+                  - !Sub arn:aws:s3:::${CrossRegionMonthlyBucketName}/*
+                  - !Sub arn:aws:s3:::${CrossRegionYearlyBucketName}/*
+                  - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-monthly/*
+                  - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-yearly/*
+                  - !Sub arn:aws:s3:::${BucketName}-${AWS::Region}-daily/*
+            Resource:
+            - !Ref CrossRegionKMSKeyArn
+            - !Ref SameRegionKMSKeyArn
+  DailyS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    DependsOn: [MonthlyS3Bucket, YearlyS3Bucket]
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - !Ref BucketName
+          - !Ref AWS::Region
+          - daily
+      AccessControl: !Ref AccessControl
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref SameRegionKMSKeyArn
+              SSEAlgorithm: aws:kms
+      VersioningConfiguration:
+        Status: !Ref Versioning
+      ReplicationConfiguration:
+        Role: !GetAtt ReplicationRole.Arn
+        Rules:
+          - Id: 'Cross Region'
+            Status: Enabled
+            Filter:
+              Prefix: ''
+            DeleteMarkerReplication:
+              Status: Disabled
+            Priority: 2
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: 'Enabled'
+            Destination:
+              Bucket: !Sub arn:aws:s3:::${CrossRegionDailyBucketName}
+              StorageClass: STANDARD_IA
+              EncryptionConfiguration:
+                ReplicaKmsKeyID:  !Ref CrossRegionKMSKeyArn
+
+          - Id: 'Same Region'
+            Status: Enabled
+            Filter:
+              TagFilter:
+                Key: 'backup'
+                Value: 'monthly'
+            DeleteMarkerReplication:
+              Status: Disabled
+            Priority: 1
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: 'Enabled'
+            Destination:
+              Bucket: !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Join
+                    - '-'
+                    - - !Ref BucketName
+                      - !Ref AWS::Region
+                      - monthly
+              StorageClass: STANDARD_IA
+              EncryptionConfiguration:
+                ReplicaKmsKeyID: !Ref SameRegionKMSKeyArn
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'Rule for Delete Object'
+            Prefix: delete
+            Status: Enabled
+            ExpirationInDays: 40
+            NoncurrentVersionExpirationInDays: 1
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref AWS::StackName
+              - !Ref AWS::Region
+              - daily
+
+  MonthlyS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    DependsOn: [YearlyS3Bucket]
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - !Ref BucketName
+          - !Ref AWS::Region
+          - monthly
+      AccessControl: !Ref AccessControl
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref SameRegionKMSKeyArn
+              SSEAlgorithm: aws:kms
+      VersioningConfiguration:
+        Status: !Ref Versioning
+      ReplicationConfiguration:
+        Role: !GetAtt ReplicationRole.Arn
+        Rules:
+          - Id: 'Cross Region'
+            Status: Enabled
+            Filter:
+              Prefix: ''
+            DeleteMarkerReplication:
+              Status: Disabled
+            Priority: 2
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: 'Enabled'
+            Destination:
+              Bucket: !Sub arn:aws:s3:::${CrossRegionMonthlyBucketName}
+              StorageClass: GLACIER
+              EncryptionConfiguration:
+                ReplicaKmsKeyID:  !Ref CrossRegionKMSKeyArn
+
+          - Id: 'Same Region'
+            Status: Enabled
+            Filter:
+              TagFilter:
+                Key: 'backup'
+                Value: 'yearly'
+            DeleteMarkerReplication:
+              Status: Disabled
+            Priority: 1
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: 'Enabled'
+            Destination:
+              Bucket: !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Join
+                    - '-'
+                    - - !Ref BucketName
+                      - !Ref AWS::Region
+                      - yearly
+              StorageClass: STANDARD_IA
+              EncryptionConfiguration:
+                ReplicaKmsKeyID: !Ref SameRegionKMSKeyArn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'Rule for Delete Object'
+            Prefix: delete
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: GLACIER
+            ExpirationInDays: 395
+            NoncurrentVersionExpirationInDays: 30
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref BucketName
+              - !Ref AWS::Region
+              - monthly
+  YearlyS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - !Ref BucketName
+          - !Ref AWS::Region
+          - yearly
+      AccessControl: !Ref AccessControl
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              KMSMasterKeyID: !Ref SameRegionKMSKeyArn
+              SSEAlgorithm: aws:kms
+      VersioningConfiguration:
+        Status: !Ref Versioning
+      ReplicationConfiguration:
+        Role: !GetAtt ReplicationRole.Arn
+        Rules:
+          - Id: 'Cross Region'
+            Status: Enabled
+            Filter:
+              Prefix: ''
+            Priority: 1
+            DeleteMarkerReplication:
+              Status: Disabled
+            SourceSelectionCriteria:
+              SseKmsEncryptedObjects:
+                Status: 'Enabled'
+            Destination:
+              Bucket: !Sub arn:aws:s3:::${CrossRegionYearlyBucketName}
+              StorageClass: GLACIER
+              EncryptionConfiguration:
+                ReplicaKmsKeyID:  !Ref CrossRegionKMSKeyArn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: 'Rule for Delete Object'
+            Prefix: delete
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 1
+                StorageClass: GLACIER
+            NoncurrentVersionExpirationInDays: 90
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+            ExpirationInDays: 2555
+      Tags:
+        - Key: Name
+          Value: !Join
+            - "-"
+            - - !Ref BucketName
+              - !Ref AWS::Region
+              - yearly
