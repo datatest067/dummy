@@ -29,16 +29,12 @@ jobs:
 
       - name: Deploy to Google Cloud Functions
         run: |
-          git diff --name-only --diff-filter=ADMR @~..@ | grep -q $1
-          retVal=$?
-          
-          echo "git command retVal : ${retVal}"
-          if [ $retVal -eq 0 ]; then
-            echo "folder/file : $1 changed"
-          else
-            echo "no match found for the folder/file : $1"
-            exit $retVal
-          fi
+          for function in a c; do
+            function_name="test-$function"
+            function_directory="test/test-$function"
+            git status --porcelain --untracked-files=no my-directory/
+          done
+
           #   function_name="test-$function"
           #   function_directory="test/test-$function"
           #   last_modified=$(stat -c %Y "$function_directory")
