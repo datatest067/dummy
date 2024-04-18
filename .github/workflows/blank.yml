@@ -30,28 +30,50 @@ jobs:
       - name: Deploy to Google Cloud Functions
         run: |
           for function in a c; do
-            function_name="test-$function"
-            function_directory="test/test-$function"
-            last_modified=$(stat -c %Y "$function_directory")
-            echo $last_modified
-            cd "$function_directory" || exit
-            last_modified_file=$(ls -t | head -n 1)
-            cd "$(git rev-parse --show-toplevel)" || exit
-            latest_commit=$(git log --pretty=format:'%H' -n 1)
-            last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
-            echo $latest_commit
-            echo $last_modified_commit
-            
-            # if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
-            #   echo "Deploying new function: $function_name"
-            if [ "$latest_commit" == "$last_modified_commit" ]; then
-              echo "Function $function_name exists in GCP, but no modifications detected, skipping deployment"
-            else
-              echo "Function $function_name has been modified, deploying changes"
-            fi
-            
-            echo "this is mine"
+          function_name="test-$function"
+          function_directory="test/test-$function"
           done
+          last_modified=$(stat -c %Y "$function_directory")
+          
+          # Iterate over files in the folder and check if any have been updated
+          updated_files=false
+          for file in "$function_directory"/*
+          do
+              if [ "$last_modified" -lt "$(stat -c %Y "$file")" ]; then
+                  updated_files=true
+                  break
+              fi
+          done
+          
+          # Output the result
+          if [ "$updated_files" = true ]; then
+              echo "Files in the folder have been updated."
+          else
+              echo "No files in the folder have been updated."
+          fi
+  
+          #   function_name="test-$function"
+          #   function_directory="test/test-$function"
+          #   last_modified=$(stat -c %Y "$function_directory")
+          #   echo $last_modified
+          #   cd "$function_directory" || exit
+          #   last_modified_file=$(ls -t | head -n 1)
+          #   cd "$(git rev-parse --show-toplevel)" || exit
+          #   latest_commit=$(git log --pretty=format:'%H' -n 1)
+          #   last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
+          #   echo $latest_commit
+          #   echo $last_modified_commit
+            
+          #   # if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
+          #   #   echo "Deploying new function: $function_name"
+          #   if [ "$latest_commit" == "$last_modified_commit" ]; then
+          #     echo "Function $function_name exists in GCP, but no modifications detected, skipping deployment"
+          #   else
+          #     echo "Function $function_name has been modified, deploying changes"
+          #   fi
+            
+          #   echo "this is mine"
+          # done
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
