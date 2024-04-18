@@ -32,17 +32,19 @@ jobs:
           for function in a c; do
             function_name="test-$function"
             function_directory="test/test-$function"
+            last_modified=$(stat -c %Y "$function_directory")
+            echo $last_modified
             cd "$function_directory" || exit
-            last_modified_file=$(ls -t | head -n 1)
+            #last_modified_file=$(ls -t | head -n 1)
             cd "$(git rev-parse --show-toplevel)" || exit
             latest_commit=$(git log --pretty=format:'%H' -n 1)
-            last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
+            #last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
             echo $latest_commit
-            echo $last_modified_commit
+            #echo $last_modified_commit
             
             if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
               echo "Deploying new function: $function_name"
-            elif [ "$latest_commit" == "$last_modified_commit" ]; then
+            elif [ "$latest_commit" == "$last_modified" ]; then
               echo "Function $function_name exists in GCP, but no modifications detected, skipping deployment"
             else
               echo "Function $function_name has been modified, deploying changes"
