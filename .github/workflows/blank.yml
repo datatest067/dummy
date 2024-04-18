@@ -31,6 +31,8 @@ jobs:
         run: |
           for function in a b c; do
             function_name="test-$function"
+            pwd
+            tree
             function_directory="test/test-$function"
             cd "$function_directory" || exit
             last_modified_file=$(ls -t | head -n 1)
