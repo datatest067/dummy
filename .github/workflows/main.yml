@@ -1,0 +1,51 @@
+name: Deploy extract-into-sheets
+
+on:
+  push:
+    branches:
+      - test
+    paths:
+      - 'test/mine-*/**'
+      - '.github/workflows/deploy-extract-into-sheets.yml'
+      - '.github/actions/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v2
+
+      # - uses: ./.github/actions/setup-gcp
+      #   with:
+      #     key: ${{ secrets.GCP_SA_KEY }}
+        
+      # - name: Modified functions
+      #   id: modified_functions
+      #   run: |
+      #   run: |
+      #     MODIFIED_FILES=$(git diff --name-only --pretty=format: HEAD)
+      #     MODIFIED_FUNCTIONS=$(echo "$MODIFIED_FILES" | grep -oE 'functions/extract-into-sheets-[abc]/' | sort -u)
+      #     echo "::set-output name=modified_functions::$MODIFIED_FUNCTIONS"
+
+      - name: Deploy to Google Cloud Functions
+        run: |
+          for function in a b c; do
+            function_name="extract-into-sheets-$function"
+            function_directory="test/mine-$function"
+            cd "$function_directory" || exit
+            last_modified_file=$(ls -t | head -n 1)
+            cd "$(git rev-parse --show-toplevel)" || exit
+            latest_commit=$(git log --pretty=format:'%H' -n 1)
+            last_modified_commit=$(git log -1 --pretty=format:%H -- "$function_directory/$last_modified_file")
+            
+            if ! gcloud functions describe $function_name --region us-central1 &>/dev/null; then
+              echo "Deploying new function: $function_name"
+            elif [ "$latest_commit" == "$last_modified_commit" ]; then
+              echo "Function $function_name exists in GCP, but no modifications detected, skipping deployment"
+            else
+              echo "Function $function_name has been modified, deploying changes"
+            fi
+            
+            echo "this is mine"
+          done
