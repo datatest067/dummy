@@ -31,7 +31,7 @@ jobs:
         run: |
               cd test
               for I in a c; do
-                function_name="test-$function"
+                function_name="test-$I"
                 #function_directory="test/$function_name"
                  cp $I/$(ls -t $I | head -1) .
                  files=(git diff-tree --no-commit-id --name-only -r $CI_COMMIT_SHA)
