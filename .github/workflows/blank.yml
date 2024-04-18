@@ -29,27 +29,13 @@ jobs:
 
       - name: Deploy to Google Cloud Functions
         run: |
-            cd test
-            pwd
-            folders=("test-a" "test-c")
-            
-            # Iterate over each folder
-            for folder in "${folders[@]}"
-            do
-                # Check if the folder has been modified in the latest commit
-                if git diff --name-only HEAD^ HEAD "$folder" | grep -q "^$folder"; then
-                    echo "Folder $folder has been modified in the latest commit."
-                    exit 0
-                else
-                  echo "folder not modified"
-                fi
-            done
-            
-            # If none of the folders have been modified
-            echo "None of the folders have been modified in the latest commit."
-            exit 1
+              for function in a c; do
+                function_name="test-$function"
+                function_directory="test/test-$function"
+                git diff --quiet HEAD origin/dev -- $function_directory || echo changed  
+                git log --name-status -n $function_directory
 
-  
+              done
           #   function_name="test-$function"
           #   function_directory="test/test-$function"
           #   last_modified=$(stat -c %Y "$function_directory")
