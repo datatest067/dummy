@@ -29,11 +29,25 @@ jobs:
 
       - name: Deploy to Google Cloud Functions
         run: |
-          for function in a c; do
-            function_name="test-$function"
-            function_directory="test/test-$function"
-            git status --porcelain --untracked-files=no my-directory/
-          done
+            function is_directory_modified() {
+                local directory="$1"
+                # Check if any file in the directory or its subdirectories has been modified
+                if git diff --name-only HEAD "$directory" | grep -q "^$directory"; then
+                    return 0 # Directory or its subdirectories have been modified
+                else
+                    return 1 # Directory and its subdirectories are unchanged
+                fi
+            }
+            
+            # Directory to check for modifications
+            directory_to_check="test"
+            
+            # Check if the directory or its subdirectories have been modified
+            if is_directory_modified "$directory_to_check"; then
+                echo "Directory $directory_to_check or its subdirectories have been modified."
+            else
+                echo "Directory $directory_to_check and its subdirectories are unchanged."
+            fi
 
           #   function_name="test-$function"
           #   function_directory="test/test-$function"
