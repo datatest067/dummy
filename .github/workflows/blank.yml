@@ -29,28 +29,41 @@ jobs:
 
       - name: Deploy to Google Cloud Functions
         run: |
-          for function in a c; do
-          function_name="test-$function"
-          function_directory="test/test-$function"
-          done
-          last_modified=$(stat -c %Y "$function_directory")
-          
-          # Iterate over files in the folder and check if any have been updated
-          updated_files=false
-          for file in "$function_directory"/*
-          do
-              if [ "$last_modified" -lt "$(stat -c %Y "$file")" ]; then
-                  updated_files=true
-                  break
-              fi
-          done
-          
-          # Output the result
-          if [ "$updated_files" = true ]; then
-              echo "Files in the folder have been updated."
-          else
-              echo "No files in the folder have been updated."
-          fi
+            for function in a,c; do
+            function_name="test-$function"
+            # Define the folder to check for updates
+            target_folder="test/test-$function"
+            done
+            # Go to the root directory of your repository
+            # cd /path/to/your/repository
+            
+            # Get the list of files in the target folder
+            files=$(find "$target_folder" -type f)
+            
+            # Loop through each file in the target folder
+            for file in $files; do
+                # Get the last modified timestamp of the file
+                last_modified=$(stat -c %Y "$file")
+            
+                # Check other folders for files with the same name
+                other_files=$(find . -type f -name "$(basename "$file")")
+            
+                # Loop through each file found in other folders
+                for other_file in $other_files; do
+                    # Get the last modified timestamp of the other file
+                    other_last_modified=$(stat -c %Y "$other_file")
+            
+                    # Compare timestamps
+                    if [ "$last_modified" -lt "$other_last_modified" ]; then
+                        echo "File '$file' has been updated in multiple folders."
+                        exit 0
+                    fi
+                done
+            done
+            
+            echo "No files in '$target_folder' have been updated in multiple folders."
+            exit 0
+
   
           #   function_name="test-$function"
           #   function_directory="test/test-$function"
