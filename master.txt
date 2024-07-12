@@ -1,0 +1,83 @@
+from flask import Flask, request, jsonify
+from google.cloud import firestore
+import os
+import json
+from jsonschema import validate, ValidationError
+import re
+
+app = Flask(__name__)
+
+# Set up Google Cloud Firestore client
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path/to/your/service-account-file.json"
+db = firestore.Client()
+
+# Define the JSON schema for validation
+person_schema = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"},
+        "email": {"type": "string", "format": "email"}
+    },
+    "required": ["name", "age", "email"]
+}
+
+# Define a function to validate Firestore document IDs
+def is_valid_id(doc_id):
+    # Firestore document IDs are alphanumeric and can include '-' and '_'
+    return bool(re.match(r'^[a-zA-Z0-9_-]+$', doc_id))
+
+@app.route('/upload', methods=['POST'])
+def upload_to_firestore():
+    try:
+        # Get JSON data from request
+        person_data = request.get_json()
+
+        if not person_data:
+            return jsonify({"error": "Invalid JSON data"}), 400
+
+        # Validate the JSON data against the schema
+        validate(instance=person_data, schema=person_schema)
+
+        # Add the data to Firestore
+        doc_ref = db.collection('persons').add(person_data)
+        doc_id = doc_ref[1].id
+
+        # Return the document ID
+        return jsonify({"id": doc_id}), 200
+
+    except ValidationError as ve:
+        return jsonify({"error": f"Invalid data: {ve.message}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/read', methods=['POST'])
+def read_from_firestore():
+    try:
+        # Get JSON data from request
+        request_data = request.get_json()
+        
+        if not request_data or 'id' not in request_data:
+            return jsonify({"error": "Invalid request data"}), 400
+
+        doc_id = request_data['id']
+
+        # Validate the ID
+        if not is_valid_id(doc_id):
+            return jsonify({"error": "Invalid ID format"}), 400
+
+        # Get the document from Firestore
+        doc_ref = db.collection('persons').document(doc_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return jsonify({"error": "Document not found"}), 404
+
+        # Return the document data directly to the requester
+        return jsonify(doc.to_dict()), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
