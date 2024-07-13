@@ -10,6 +10,11 @@ steps:
     args: ['push', 'gcr.io/deep1234/my-image']
     env:
       - 'CLOUD_LOGGING_ONLY=NONE'
+artifacts:
+  objects:
+    location: gs://docker54321/
+    paths:
+      - test_log.xml
 
 images:
   - 'gcr.io/deep1234/my-image'
