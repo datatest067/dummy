@@ -2,10 +2,14 @@ steps:
   # Step 1: Build Docker image using Dockerfile
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/deep1234/my-image', '.']
+    env:
+      - 'CLOUD_LOGGING_ONLY=NONE'
 
   # Step 2: Push built image to Google Container Registry (GCR)
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/deep1234/my-image']
+    env:
+      - 'CLOUD_LOGGING_ONLY=NONE'
 
 images:
   - 'gcr.io/deep1234/my-image'
