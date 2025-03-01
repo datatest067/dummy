@@ -1,0 +1,16 @@
+name: Call Reusable Workflow
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  call-reusable-workflow:
+    uses: datatest067/saiproject/.github/workflows/reusable-workflow.yml@master
+    with:
+      repo_name: "datatest067/dummy"
+      branch: "dev"
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
