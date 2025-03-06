@@ -1,0 +1,16 @@
+name: Call Reusable Workflow
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  call-reusable-workflow:
+    uses: datatest067/saiproject/.github/workflows/reusable-workflow.yml@master
+    with:
+      image-name: 'your-image-name'
+      registry: 'docker.io'  # Example: Docker Hub registry
+      registry-username: ${{ secrets.DOCKER_USERNAME }}
+      registry-password: ${{ secrets.DOCKER_PASSWORD }}
