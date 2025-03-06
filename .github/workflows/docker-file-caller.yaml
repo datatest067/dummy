@@ -10,7 +10,7 @@ jobs:
   call-reusable-workflow:
     uses: datatest067/saiproject/.github/workflows/docker-registry.yaml@master
     with:
-      image-name: 'your-image-name'
+      image-name: 'jmeter'
       registry: 'docker.io'  # Example: Docker Hub registry
       registry-username: ${{ secrets.DOCKER_USERNAME }}
       registry-password: ${{ secrets.DOCKER_PASSWORD }}
