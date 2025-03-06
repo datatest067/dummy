@@ -8,7 +8,7 @@ on:
 
 jobs:
   call-reusable-workflow:
-    uses: datatest067/saiproject/.github/workflows/reusable-workflow.yml@master
+    uses: datatest067/saiproject/.github/workflows/docker-registry.yaml@master
     with:
       image-name: 'your-image-name'
       registry: 'docker.io'  # Example: Docker Hub registry
