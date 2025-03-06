@@ -1,4 +1,4 @@
-name: Call Reusable Workflow
+name: Call docker-registry Workflow
 
 on:
   push:
