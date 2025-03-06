@@ -12,5 +12,5 @@ jobs:
     with:
       image-name: 'jmeter'
       registry: 'docker.io'  # Example: Docker Hub registry
-      registry-username: ${{ secrets.DOCKER_USERNAME }}
       registry-password: ${{ secrets.DOCKER_PASSWORD }}
+      registry-username: ${{ secrets.DOCKER_USERNAME }}
