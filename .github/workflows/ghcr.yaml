@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: sigstore/cosign-installer@v3.5.0  #actions/checkout@v4
 
       - name: Log in to Docker pass
         run: echo "${{ secrets.DOCKER_PASSWORD }}"
@@ -58,12 +58,12 @@ jobs:
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
           cosign version
-      - name: generate key
-        run: |
-          cosign generate-key-pair
-          ls -lrth
-          cat cosign.key
-          cat cosign.pub
+      # - name: generate key
+      #   run: |
+      #     cosign generate-key-pair
+      #     ls -lrth
+      #     cat cosign.key
+      #     cat cosign.pub
       # - name: Verify attestation
       #   env:
       #    GH_TOKEN: ${{ secrets.TOKEN }}
@@ -71,10 +71,22 @@ jobs:
       #     echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
       #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
 
+
       - name: Verify attestation
         run: |
-            cosign verify-attestation --key ${{ secrets.COSIGN_KEY }} ghcr.io/datatest067/mine:latest
-      #     cosign verify-attestation \
+          COSIGN_REPOSITORY=ghcr.io/datatest067/mine cosign \
+            verify-attestation ghcr.io/datatest067/mine@"${{ env.IMAGE_DIGEST }}" \
+            --certificate-identity-regexp "https:\/\/github\.com\/datatest067\/actions-toolkit\/\.github\/workflows\/ghcr.*"  \
+            --type spdx \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-github-workflow-trigger workflow_dispatch \
+            --certificate-github-workflow-name create-release \
+            --certificate-github-workflow-repository datatest067/mine \
+            --certificate-github-workflow-ref refs/heads/dev > output
+      # - name: Verify attestation
+      #   run: |
+      #       cosign verify-attestation --key ${{ secrets.COSIGN_KEY }} ghcr.io/datatest067/mine:latest
+      # #     cosign verify-attestation \
       #       --type slsaprovenance \
       #       --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ghcr.yaml@refs/heads/${{ github.ref_name }}" \
       #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
