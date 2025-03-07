@@ -60,6 +60,8 @@ jobs:
           cosign version
 
       - name: Verify attestation
+        env:
+         GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
           gh attestation verify oci://ghcr.io/ORGANIZATION_NAME/IMAGE_NAME:test -R ORGANIZATION_NAME/REPOSITORY_NAME
