@@ -51,9 +51,6 @@ jobs:
           push-to-registry: true
           show-summary: true
 
-      - name: Verify attestation
-        run: docker trust inspect --pretty ghcr.io/datatest067/mine:${{ env.IMAGE_DIGEST }}
-
       - name: Install Cosign
         run: |
           COSIGN_VERSION=$(curl -sL https://api.github.com/repos/sigstore/cosign/releases/latest | jq -r ".tag_name")
@@ -62,14 +59,18 @@ jobs:
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
           cosign version
 
-
       - name: Verify attestation
         run: |
-          cosign verify-attestation \
-            --type slsaprovenance \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ghcr.yaml@refs/heads/${{ github.ref_name }}" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            ghcr.io/datatest067/mine:latest
+          echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
+          gh attestation verify oci://ghcr.io/ORGANIZATION_NAME/IMAGE_NAME:test -R ORGANIZATION_NAME/REPOSITORY_NAME
+
+      # - name: Verify attestation
+      #   run: |
+      #     cosign verify-attestation \
+      #       --type slsaprovenance \
+      #       --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ghcr.yaml@refs/heads/${{ github.ref_name }}" \
+      #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+      #       ghcr.io/datatest067/mine:latest
 
       # - name: Generate attestation
       #   run: |
