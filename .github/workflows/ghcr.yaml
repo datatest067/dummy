@@ -58,7 +58,10 @@ jobs:
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
           cosign version
-
+      - name: generate key
+        run: |
+          cosign generate-key-pair
+          cat cosign.key
       - name: Verify attestation
         env:
          GH_TOKEN: ${{ secrets.TOKEN }}
