@@ -41,11 +41,12 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
-      - name: Generate attestation
-        uses: actions/attest-build-provenance@v1
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
         with:
-          subject-name:  ghcr.io/datatest067/mine #${{ inputs.registry }} #${{ inputs.registry }}/${{ inputs.image_name }}
-          subject-digest: $(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/datatest067/mine:latest)
+          subject-name: ${{ env.IMAGE_URI }}
+          subject-digest: "${{ env.IMAGE_DIGEST }}" #"sha256:${{ env.IMAGE_DIGEST }}"
+          push-to-registry: true
 
       - name: Verify attestation
         run: |
