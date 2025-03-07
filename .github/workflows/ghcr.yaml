@@ -30,7 +30,7 @@ jobs:
       - name: Build Docker Image
         run: |
           #IMAGE_URI=${{ inputs.registry }}/${{ inputs.image-name }}
-          IMAGE_URI="ghcr.io/mine:latest"
+          IMAGE_URI="ghcr.io/datatest067/mine:latest"
           #docker push ghcr.io/datatest067/mine:latest
           docker build -t ghcr.io/datatest067/mine:latest .
           #docker tag $IMAGE_URI:latest manishmf/jmeter:latest
@@ -41,9 +41,20 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.IMAGE_URI }}
-          subject-digest: "${{ env.IMAGE_DIGEST }}" #"sha256:${{ env.IMAGE_DIGEST }}"
-          push-to-registry: true
+    
+
+      - name: Generate attestation
+        run: |
+          docker trust key generate ${GITHUB_REPOSITORY}
+          docker trust signer add --key ~/.docker/trust/private/$GITHUB_REPOSITORY-key.json repoName ${GITHUB_REPOSITORY}
+          docker trust sign ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
+
+      - name: Verify attestation
+        run: docker trust inspect --pretty ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
+
+      # - name: Generate artifact attestation
+      #   uses: actions/attest-build-provenance@v2
+      #   with:
+      #     subject-name: ${{ env.IMAGE_URI }}
+      #     subject-digest: "${{ env.IMAGE_DIGEST }}" #"sha256:${{ env.IMAGE_DIGEST }}"
+      #     push-to-registry: true
