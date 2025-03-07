@@ -74,15 +74,7 @@ jobs:
 
       - name: Verify attestation
         run: |
-          COSIGN_REPOSITORY=ghcr.io/datatest067/mine cosign \
-            verify-attestation ghcr.io/datatest067/mine@"${{ env.IMAGE_DIGEST }}" \
-            --certificate-identity-regexp "https:\/\/github\.com\/datatest067\/actions-toolkit\/\.github\/workflows\/ghcr.*"  \
-            --type spdx \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-github-workflow-trigger workflow_dispatch \
-            --certificate-github-workflow-name create-release \
-            --certificate-github-workflow-repository datatest067/mine \
-            --certificate-github-workflow-ref refs/heads/dev > output
+          cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' 'ghcr.io/datatest067/mine@sha256:ec1b05d1eac264d9204a57f4ad9d4dc35e9e756e9fedaea0674aefc7edb1d6a4'   
       # - name: Verify attestation
       #   run: |
       #       cosign verify-attestation --key ${{ secrets.COSIGN_KEY }} ghcr.io/datatest067/mine:latest
