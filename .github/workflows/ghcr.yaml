@@ -45,8 +45,8 @@ jobs:
 
       - name: Generate attestation
         run: |
-          docker trust key generate ${GITHUB_REPOSITORY}
-          docker trust signer add --key ~/.docker/trust/private/$GITHUB_REPOSITORY-key.json repoName ${GITHUB_REPOSITORY}
+          docker trust key generate dummy
+          docker trust signer add --key ~/.docker/trust/private/$GITHUB_REPOSITORY-key.json repoName dummy
           docker trust sign ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
 
       - name: Verify attestation
