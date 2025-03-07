@@ -64,15 +64,16 @@ jobs:
           ls -lrth
           cat cosign.key
           cat cosign.pub
-      - name: Verify attestation
-        env:
-         GH_TOKEN: ${{ secrets.TOKEN }}
-        run: |
-          echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
-          gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
-
       # - name: Verify attestation
+      #   env:
+      #    GH_TOKEN: ${{ secrets.TOKEN }}
       #   run: |
+      #     echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
+      #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
+
+      - name: Verify attestation
+        run: |
+            cosign verify-attestation --key ${{ secrets.COSIGN_KEY }} ghcr.io/datatest067/mine:latest
       #     cosign verify-attestation \
       #       --type slsaprovenance \
       #       --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ghcr.yaml@refs/heads/${{ github.ref_name }}" \
