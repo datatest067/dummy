@@ -61,7 +61,9 @@ jobs:
       - name: generate key
         run: |
           cosign generate-key-pair
+          ls -lrth
           cat cosign.key
+          cat cosign.pub
       - name: Verify attestation
         env:
          GH_TOKEN: ${{ secrets.TOKEN }}
