@@ -1,0 +1,62 @@
+name: Build and Attest Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        required: true
+        type: string
+      registry:
+        required: true
+        type: string
+    secrets:
+      DOCKER_PASSWORD:
+        required: true
+        # type: string
+      DOCKER_USERNAME:
+        required: true
+      TOKEN:
+        required: true
+        # type: string
+
+
+jobs:
+  build-and-attest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC-based signing
+      attestations: write  # Needed for provenance attestation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker pass
+        run: echo "${{ secrets.DOCKER_PASSWORD }}"
+      - name: Log in to Docker user
+        run: echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
+        #run: echo "${{ secrets.DOCKER_USERNAME }}"
+      #   run: echo "${{ inputs.docker-password }}" | docker login ${{ inputs.registry }} -u ${{ inputs.docker-username }} --password-stdin
+        #run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ inputs.registry }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          #IMAGE_URI=${{ inputs.registry }}/${{ inputs.image-name }}
+          IMAGE_URI="ghcr.io/datatest067/mine:latest"
+          docker push ghcr.io/datatest067/mine:latest
+          docker build -t ghcr.io/datatest067/mine:latest .
+          #docker tag $IMAGE_URI:latest manishmf/jmeter:latest
+          #echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ inputs.registry }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
+          docker push ghcr.io/datatest067/mine:latest
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/datatest067/mine:latest | cut -d'@' -f2)
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE_URI }}
+          subject-digest: "${{ env.IMAGE_DIGEST }}" #"sha256:${{ env.IMAGE_DIGEST }}"
+          push-to-registry: true
