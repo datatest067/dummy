@@ -41,16 +41,28 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
-    
-
       - name: Generate attestation
-        run: |
-          docker trust key generate dummy
-          docker trust signer add --key ~/.docker/trust/private/$GITHUB_REPOSITORY-key.json repoName dummy
-          docker trust sign ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name:  ghcr.io/datatest067/mine #${{ inputs.registry }} #${{ inputs.registry }}/${{ inputs.image_name }}
+          subject-digest: $(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/datatest067/mine:latest)
 
       - name: Verify attestation
-        run: docker trust inspect --pretty ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
+        run: |
+          cosign verify-attestation \
+            --type slsaprovenance \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/ghcr.yaml@refs/heads/${{ github.ref_name }}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            ghcr.io/datatest067/mine:latest
+
+      # - name: Generate attestation
+      #   run: |
+      #     docker trust key generate dummy
+      #     docker trust signer add --key ~/.docker/trust/private/$GITHUB_REPOSITORY-key.json repoName dummy
+      #     docker trust sign ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
+
+      # - name: Verify attestation
+      #   run: docker trust inspect --pretty ${{ env.IMAGE_URI }}:${{ env.IMAGE_DIGEST }}
 
       # - name: Generate artifact attestation
       #   uses: actions/attest-build-provenance@v2
