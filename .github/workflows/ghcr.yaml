@@ -1,23 +1,10 @@
 name: Build and Attest Docker Image
 
 on:
-  workflow_call:
-    inputs:
-      image-name:
-        required: true
-        type: string
-      registry:
-        required: true
-        type: string
-    secrets:
-      DOCKER_PASSWORD:
-        required: true
-        # type: string
-      DOCKER_USERNAME:
-        required: true
-      TOKEN:
-        required: true
-        # type: string
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
 
 
 jobs:
