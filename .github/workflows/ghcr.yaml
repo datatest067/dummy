@@ -30,7 +30,7 @@ jobs:
       - name: Build Docker Image
         run: |
           #IMAGE_URI=${{ inputs.registry }}/${{ inputs.image-name }}
-          IMAGE_URI="ghcr.io/datatest067/mine:latest"
+          IMAGE_URI="ghcr.io/mine:latest"
           #docker push ghcr.io/datatest067/mine:latest
           docker build -t ghcr.io/datatest067/mine:latest .
           #docker tag $IMAGE_URI:latest manishmf/jmeter:latest
