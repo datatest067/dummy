@@ -77,7 +77,8 @@ jobs:
           cosign sign ghcr.io/datatest067/mine:latest
       - name: Verify attestation
         run: |
-         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
+         cosign verify-attestation ghcr.io/datatest067/mine:latest
+         #cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
 
       # - name: Verify attestation
       #   run: |
