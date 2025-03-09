@@ -71,10 +71,6 @@ jobs:
       #     echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
       #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
 
-      - name: list of sign 
-        run: |
-          cosign list signatures ghcr.io/datatest067/mine@sha256:ec1b05d1eac264d9204a57f4ad9d4dc35e9e756e9fedaea0674aefc7edb1d6a4
-
       - name: Verify attestation
         run: |
           cosign verify ghcr.io/datatest067/mine@sha256:ec1b05d1eac264d9204a57f4ad9d4dc35e9e756e9fedaea0674aefc7edb1d6a4
