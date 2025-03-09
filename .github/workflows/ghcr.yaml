@@ -13,7 +13,8 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for OIDC-based signing
-      #attestations: write  # Needed for provenance attestation
+      attestations: write  # Needed for provenance attestation
+      packages: write
 
     steps:
       - name: Checkout code
@@ -56,7 +57,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: 1
         run: |
-          cosign sign ghcr.io/datatest067/mine:latest
+          cosign sign --yes ghcr.io/datatest067/mine:latest
 
       - name: Wait for Rekor propagation
         run: sleep 15
