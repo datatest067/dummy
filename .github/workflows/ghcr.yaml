@@ -41,6 +41,14 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
+      - name: Install Cosign
+        run: |
+          COSIGN_VERSION=$(curl -sL https://api.github.com/repos/sigstore/cosign/releases/latest | jq -r ".tag_name")
+          curl -LO "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
+          chmod +x cosign-linux-amd64
+          sudo mv cosign-linux-amd64 /usr/local/bin/cosign
+          cosign version
+
       - name: Sign the Docker image
         run: |
           cosign sign ghcr.io/datatest067/mine:latest
@@ -52,28 +60,7 @@ jobs:
           subject-digest: "${{ env.IMAGE_DIGEST }}" #"sha256:${{ env.IMAGE_DIGEST }}"
           push-to-registry: true
           show-summary: true
-
-      - name: Install Cosign
-        run: |
-          COSIGN_VERSION=$(curl -sL https://api.github.com/repos/sigstore/cosign/releases/latest | jq -r ".tag_name")
-          curl -LO "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
-          chmod +x cosign-linux-amd64
-          sudo mv cosign-linux-amd64 /usr/local/bin/cosign
-          cosign version
-      # - name: generate key
-      #   run: |
-      #     cosign generate-key-pair
-      #     ls -lrth
-      #     cat cosign.key
-      #     cat cosign.pub
-      # - name: Verify attestation
-      #   env:
-      #    GH_TOKEN: ${{ secrets.TOKEN }}
-      #   run: |
-      #     echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
-      #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
-
-
+          
       - name: Verify attestation
         run: |
         
