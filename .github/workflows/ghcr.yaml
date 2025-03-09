@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for OIDC-based signing
-      attestations: write  # Needed for provenance attestation
+      #attestations: write  # Needed for provenance attestation
 
     steps:
       - name: Checkout code
@@ -49,9 +49,17 @@ jobs:
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
           cosign version
 
+      # - name: Sign the Docker image
+      #   run: |
+      #     cosign sign ghcr.io/datatest067/mine:latest
       - name: Sign the Docker image
+        env:
+          COSIGN_EXPERIMENTAL: 1
         run: |
           cosign sign ghcr.io/datatest067/mine:latest
+
+      - name: Wait for Rekor propagation
+        run: sleep 15
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
@@ -65,6 +73,6 @@ jobs:
         run: |
         
          #cosign verify-attestation --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@refs/heads/${{ github.ref_name }}" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" ghcr.io/datatest067/mine:latest
-         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
+         COSIGN_EXPERIMENTAL=1 cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
 
       
