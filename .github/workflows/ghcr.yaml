@@ -71,9 +71,13 @@ jobs:
       #     echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u datatest067 --password-stdin
       #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
 
+
+      - name: Sign the Docker image
+        run: |
+          cosign sign ghcr.io/datatest067/mine:latest
       - name: Verify attestation
         run: |
-         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine@${{ env.IMAGE_DIGEST }}
+         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
 
       # - name: Verify attestation
       #   run: |
