@@ -73,7 +73,7 @@ jobs:
 
       - name: Verify attestation
         run: |
-         cosign verify --certificate-identity-regexp '.*' ghcr.io/datatest067/mine@sha256:${{ env.IMAGE_DIGEST }}
+         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine@sha256:${{ env.IMAGE_DIGEST }}
 
       # - name: Verify attestation
       #   run: |
