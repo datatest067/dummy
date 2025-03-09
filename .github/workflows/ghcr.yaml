@@ -41,7 +41,9 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
-
+      - name: Sign the Docker image
+        run: |
+          cosign sign ghcr.io/datatest067/mine:latest
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
@@ -72,9 +74,6 @@ jobs:
       #     gh attestation verify oci://ghcr.io/datatest067/mine:latest -R datatest067/mine
 
 
-      - name: Sign the Docker image
-        run: |
-          cosign sign ghcr.io/datatest067/mine:latest
       - name: Verify attestation
         run: |
         
