@@ -73,8 +73,8 @@ jobs:
 
       - name: Verify attestation
         run: |
-          cosign verify --certificate-identity-regexp '.*' ghcr.io/datatest067/mine@sha256:ec1b05d1eac264d9204a57f4ad9d4dc35e9e756e9fedaea0674aefc7edb1d6a4
-         # cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp '.*' 'ghcr.io/datatest067/mine@sha256:ec1b05d1eac264d9204a57f4ad9d4dc35e9e756e9fedaea0674aefc7edb1d6a4'   
+         cosign verify --certificate-identity-regexp '.*' ghcr.io/datatest067/mine@sha256:${{ env.IMAGE_DIGEST }}
+
       # - name: Verify attestation
       #   run: |
       #       cosign verify-attestation --key ${{ secrets.COSIGN_KEY }} ghcr.io/datatest067/mine:latest
