@@ -51,9 +51,7 @@ jobs:
 
       - name: Sign the Docker image
         run: |
-          cosign inspect --attestations ghcr.io/datatest067/mine:latest
-
-          #cosign sign ghcr.io/datatest067/mine:latest
+          cosign sign ghcr.io/datatest067/mine:latest
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
@@ -66,8 +64,8 @@ jobs:
       - name: Verify attestation
         run: |
         
-         cosign verify-attestation --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@refs/heads/${{ github.ref_name }}" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" ghcr.io/datatest067/mine:latest
-         #cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
+         #cosign verify-attestation --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@refs/heads/${{ github.ref_name }}" --certificate-oidc-issuer "https://token.actions.githubusercontent.com" ghcr.io/datatest067/mine:latest
+         cosign verify --certificate-identity-regexp '.*' --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com' ghcr.io/datatest067/mine:latest
 
       # - name: Verify attestation
       #   run: |
